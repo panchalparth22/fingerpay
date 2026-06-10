@@ -50,7 +50,7 @@ const SignUpScreen = () => {
   setLoading(true);
   try {
     // Call backend to register user
-    const response = await fetch(`${API_BASE_URL}/users`, {
+    const response = await fetch(`${API_BASE_URL}/user/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

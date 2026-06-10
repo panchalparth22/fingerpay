@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 // API routes with /api prefix
-app.use('/api/users', userRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/bank', bankRoutes);
 
