@@ -1,11 +1,11 @@
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import React from "react";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 
-import HomeScreen from '../screens/HomeScreen';
-import PayPointsScreen from '../screens/PayPointsScreen';
-import MoneyScreen from '../screens/MoneyScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import HomeScreen from "../screens/HomeScreen";
+import PayPointsScreen from "../screens/PayPointsScreen";
+import MoneyScreen from "../screens/MoneyScreen";
+import ProfileScreen from "../screens/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -14,10 +14,10 @@ const BottomNavBar = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#5b21b6',
-        tabBarInactiveTintColor: '#666',
+        tabBarActiveTintColor: "#5b21b6",
+        tabBarInactiveTintColor: "#666",
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: "#fff",
           height: 60,
           paddingTop: 5,
           paddingBottom: 5,
@@ -33,15 +33,7 @@ const BottomNavBar = () => {
           ),
         }}
       />
-      <Tab.Screen
-        name="PayPoints"
-        component={PayPointsScreen}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="star-outline" color={color} size={size} />
-          ),
-        }}
-      />
+      
       <Tab.Screen
         name="Bank"
         component={MoneyScreen}
@@ -51,6 +43,17 @@ const BottomNavBar = () => {
           ),
         }}
       />
+
+      <Tab.Screen
+        name="PayPoints"
+        component={PayPointsScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="star-outline" color={color} size={size} />
+          ),
+        }}
+      />
+
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
