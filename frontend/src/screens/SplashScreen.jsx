@@ -7,7 +7,7 @@ const SplashScreen = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigation.replace('AppLoader'); // We'll create a loader that checks auth and goes to appropriate screen
+      navigation.replace('LoginScreen');
     }, 3000);
 
     return () => clearTimeout(timer);
@@ -15,7 +15,6 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Icon: using text "FingerPay" as placeholder, white color (negative of baby blue) */}
       <Text style={styles.icon}>FingerPay</Text>
       <Text style={{ color: '#ffffff', marginTop: 0, letterSpacing: 0.5 }}>Your fingerprint, your wallet!</Text>
     </View>

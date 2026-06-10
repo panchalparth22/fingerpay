@@ -80,7 +80,7 @@ const SignUpScreen = () => {
     });
 
     // Navigate to main app
-    navigation.replace('PaymentScreen');
+    navigation.replace('HomeScreen');
   } catch (error) {
     Alert.alert('Registration failed', error.message || 'Unknown error');
   } finally {

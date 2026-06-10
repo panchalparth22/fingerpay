@@ -30,7 +30,12 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       {isAuthenticated ? (
-        <Stack.Navigator initialRouteName="PaymentScreen" screenOptions={{ headerShown: false }}>
+        <Stack.Navigator initialRouteName="HomeScreen" screenOptions={{ headerShown: false }}>
+          <Stack.Screen 
+            name="HomeScreen" 
+            component={HomeScreen} 
+            options={{ headerShown: false }} 
+          />
           <Stack.Screen 
             name="PaymentScreen" 
             component={PaymentScreen} 
@@ -77,6 +82,7 @@ const AppNavigator = () => {
 
 // Import screens at the bottom to avoid circular dependencies
 import SplashScreen from '../screens/SplashScreen';
+import HomeScreen from '../screens/HomeScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import EnrolmentScreen from '../screens/EnrolmentScreen';
 import PaymentResultScreen from '../screens/PaymentResultScreen';
