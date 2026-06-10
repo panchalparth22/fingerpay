@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
+import BottomNavBar from '../components/BottomNavBar';
 
 const Stack = createStackNavigator();
 
@@ -30,49 +31,28 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       {isAuthenticated ? (
-        <Stack.Navigator initialRouteName="HomeScreen" screenOptions={{ headerShown: false }}>
-          <Stack.Screen 
-            name="HomeScreen" 
-            component={HomeScreen} 
-            options={{ headerShown: false }} 
-          />
-          <Stack.Screen 
-            name="PaymentScreen" 
-            component={PaymentScreen} 
-            options={{ headerShown: false }} 
-          />
-          <Stack.Screen 
-            name="EnrolmentScreen" 
-            component={EnrolmentScreen} 
-            options={{ headerShown: false }} 
-          />
-          <Stack.Screen 
-            name="PaymentResultScreen" 
-            component={PaymentResultScreen} 
-            options={{ headerShown: false }} 
-          />
-        </Stack.Navigator>
+        <BottomNavBar />
       ) : (
         <Stack.Navigator initialRouteName="LoginScreen" screenOptions={{ headerShown: false }}>
-          <Stack.Screen 
-            name="LoginScreen" 
-            component={LoginScreen} 
-            options={{ headerShown: false }} 
+          <Stack.Screen
+            name="LoginScreen"
+            component={LoginScreen}
+            options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="SignUpScreen" 
-            component={SignUpScreen} 
-            options={{ headerShown: false }} 
+          <Stack.Screen
+            name="SignUpScreen"
+            component={SignUpScreen}
+            options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="MerchantLoginScreen" 
-            component={MerchantLoginScreen} 
-            options={{ headerShown: false }} 
+          <Stack.Screen
+            name="MerchantLoginScreen"
+            component={MerchantLoginScreen}
+            options={{ headerShown: false }}
           />
-          <Stack.Screen 
-            name="MerchantSignUpScreen" 
-            component={MerchantSignUpScreen} 
-            options={{ headerShown: false }} 
+          <Stack.Screen
+            name="MerchantSignUpScreen"
+            component={MerchantSignUpScreen}
+            options={{ headerShown: false }}
           />
         </Stack.Navigator>
       )}

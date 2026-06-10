@@ -8,11 +8,22 @@ import {
   FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../context/AuthContext"; // adjust path
 
 const HomeScreen = () => {
+  const { user } = useAuth();
+  const userName = user?.name || "there";
   const walletBalance = 1250.5;
   const [showBalance, setShowBalance] = useState(false);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
 
   const transactions = [
     {
@@ -100,12 +111,16 @@ const HomeScreen = () => {
 
   const visibleTransactions = showAllTransactions
     ? transactions
-    : transactions.slice(0, 5);
+    : transactions.slice(0, 4);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.appName}>FingerPay</Text>
+        <View>
+          <Text style={styles.greetingText}>{getGreeting()}</Text>
+          <Text style={styles.subGreetingText}>Hi, {userName} 👋</Text>
+        </View>
+
         <TouchableOpacity style={styles.verifyButton} onPress={() => {}}>
           <Text style={styles.verifyButtonText}>Verify Account</Text>
         </TouchableOpacity>
@@ -135,7 +150,7 @@ const HomeScreen = () => {
       <View style={styles.transactionHistoryContainer}>
         <View style={styles.transactionHeaderRow}>
           <Text style={styles.transactionHistoryTitle}>
-            Transaction History
+            Recent Transactions
           </Text>
 
           <TouchableOpacity
@@ -164,6 +179,7 @@ const HomeScreen = () => {
           )}
           // optional: limit height so it scrolls inside the card when expanded
           style={{ maxHeight: showAllTransactions ? 500 : undefined }}
+          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         />
       </View>
     </View>
@@ -173,7 +189,7 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#1a1a1a01",
     paddingTop: 27,
   },
   header: {
@@ -183,10 +199,15 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#5b21b6",
   },
-  appName: {
+  greetingText: {
+    color: "#e5e7eb",
+    fontSize: 13,
+  },
+  subGreetingText: {
     color: "#fff",
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 18,
+    marginTop: 2,
+    fontWeight: "600",
   },
   verifyButton: {
     backgroundColor: "#fff",
@@ -209,7 +230,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   walletCard: {
-    backgroundColor: "#f0f8ff",
+    backgroundColor: "#fff",
     padding: 20,
     margin: 16,
     borderRadius: 8,
@@ -239,25 +260,22 @@ const styles = StyleSheet.create({
   },
   transactionHistoryContainer: {
     marginTop: 24,
-    backgroundColor: "#f7f7f7",
     margin: 10,
     paddingTop: 16,
     paddingBottom: 16,
-    borderRadius: 8,
   },
   transactionHistoryTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "bold",
-    paddingHorizontal: 16,
     marginBottom: 8,
   },
   transactionItem: {
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
+    borderRadius: 18,
     marginHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    backgroundColor: "#fff",
   },
   merchantLogo: {
     width: 50,
