@@ -1,0 +1,14 @@
+# Expo
+.expo/
+node_modules/
+npm-debug.log*
+.watchman/
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+# OS
+.DS_Store
+Thumbs.db
