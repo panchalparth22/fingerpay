@@ -9,9 +9,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext"; // adjust path
+import { useNavigation } from "@react-navigation/native";
 
 const HomeScreen = () => {
   const { user } = useAuth();
+  const navigation = useNavigation();
   const userName = user?.name || "there";
   const walletBalance = 1250.5;
   const [showBalance, setShowBalance] = useState(false);
@@ -121,7 +123,9 @@ const HomeScreen = () => {
           <Text style={styles.subGreetingText}>Hi, {userName} 👋</Text>
         </View>
 
-        <TouchableOpacity style={styles.verifyButton} onPress={() => {}}>
+        <TouchableOpacity style={styles.verifyButton} onPress={() => {
+          navigation.navigate("VerifyAccountScreen");
+        }}>
           <Text style={styles.verifyButtonText}>Verify Account</Text>
         </TouchableOpacity>
       </View>

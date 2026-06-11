@@ -14,9 +14,13 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  biometricId: {
-    type: String,
-    required: false,
+  biometricEnabled: {
+    type: Boolean,
+    default: false
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
   },
   balance: {
     type: Number,
@@ -50,9 +54,9 @@ const UserSchema = new mongoose.Schema({
   }
 });
 
-UserSchema.index(
-  { biometricId: 1 },
-  { unique: true, partialFilterExpression: { biometricId: { $exists: true } } }
-);
+// UserSchema.index(
+//   { biometricId: 1 },
+//   { unique: true, partialFilterExpression: { biometricId: { $exists: true } } }
+// );
 
 module.exports = mongoose.model('User', UserSchema);

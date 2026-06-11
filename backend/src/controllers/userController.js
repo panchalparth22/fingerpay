@@ -74,6 +74,7 @@ const loginUser = async (req, res) => {
         email: user.email,
         name: user.name,
         balance: user.balance,
+        emailVerified: user.emailVerified,
       },
     });
   } catch (err) {
@@ -81,5 +82,7 @@ const loginUser = async (req, res) => {
     return res.status(500).json({ error: 'Server error while logging in' });
   }
 };
+
+
 
 module.exports = { createUser, loginUser };

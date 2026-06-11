@@ -25,9 +25,6 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setIsAuthenticated(false);
     setUser(null);
-    // Clear any stored biometric ID for the customer? (optional)
-    // But note: the biometric ID is for the customer, not the merchant.
-    // We might want to keep it for the next customer.
   };
 
   return (
