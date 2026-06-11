@@ -13,20 +13,26 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { OtpInput } from "react-native-otp-entry";
 import { useAuth } from "../context/AuthContext";
 import { API_BASE_URL } from "../config/env";
+import { useNavigation } from "@react-navigation/native";
 
 const VerifyAccountScreen = () => {
+  const navigation = useNavigation();
   const [phoneCode, setPhoneCode] = useState("");
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [biometricVerified, setBiometricVerified] = useState(false);
   const [defaultPayment, setDefaultPayment] = useState("card");
 
   const { user } = useAuth();
-  
+
   const [emailCode, setEmailCode] = useState("");
   const [emailVerified, setEmailVerified] = useState(user?.emailVerified);
- 
+
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
+
+  const handleCardPress = () => {
+    navigation.navigate("CardDetailsScreen"); 
+  };
 
   const handleSendEmailCode = async () => {
     try {
@@ -226,7 +232,6 @@ const VerifyAccountScreen = () => {
       </View>
 
       {/* Phone verification */}
-      
 
       {/* Biometric verification */}
       <View style={styles.section}>
@@ -262,7 +267,7 @@ const VerifyAccountScreen = () => {
               styles.paymentOption,
               defaultPayment === "card" && styles.paymentOptionActive,
             ]}
-            onPress={() => setDefaultPayment("card")}
+            onPress={handleCardPress}
           >
             <Text
               style={[
@@ -297,14 +302,13 @@ const VerifyAccountScreen = () => {
             </Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.primaryButtonFull}
-          onPress={handleSaveDefaultPayment}
-        >
-          <Text style={styles.primaryButtonText}>Save default method</Text>
-        </TouchableOpacity>
       </View>
+      <TouchableOpacity
+        style={styles.primaryButtonFull}
+        onPress={handleSaveDefaultPayment}
+      >
+        <Text style={styles.primaryButtonText}>Verify Now</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };

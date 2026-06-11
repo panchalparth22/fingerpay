@@ -10,16 +10,19 @@ import {
   StyleSheet,
   Image,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "../context/AuthContext";
 import { isValidEmail, isNotEmpty } from "../utils/validation";
 import { useNavigation } from "@react-navigation/native";
 import { API_BASE_URL } from "../config/env";
 
 const LoginScreen = () => {
+  const { setUser, setToken } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user, token } = useAuth();
   const navigation = useNavigation();
 
   const handleLogin = async () => {
@@ -52,6 +55,15 @@ const LoginScreen = () => {
       }
 
       const data = await response.json();
+      // setUser(data.user);
+      // setToken(data.token);
+      // await AsyncStorage.setItem(
+      //   "auth",
+      //   JSON.stringify({
+      //     user: data.user,
+      //     token: data.token,
+      //   }),
+      // );
 
       // data should include user info (and maybe a token) from your backend
       // e.g. { id, name, email, ... }

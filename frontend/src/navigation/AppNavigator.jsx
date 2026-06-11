@@ -15,6 +15,7 @@ import SignUpScreen from "../screens/SignUpScreen";
 import MerchantLoginScreen from "../screens/MerchantLoginScreen";
 import MerchantSignUpScreen from "../screens/MerchantSignUpScreen";
 import VerifyAccountScreen from "../screens/VerifyAccountScreen";
+import CardDetailsScreen from "../screens/CardDetailsScreen";
 
 const RootStack = createStackNavigator();
 const AuthStack = createStackNavigator();
@@ -92,6 +93,10 @@ const AppNavigator = () => {
         <RootStack.Screen
           name="VerifyAccountScreen"
           component={VerifyAccountScreen}
+        />
+        <RootStack.Screen
+          name="CardDetailsScreen"
+          component={CardDetailsScreen}
         />
 
         {/* Optional: if any of these are not inside BottomNavBar navigators,

@@ -1,5 +1,9 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+const generateToken = (userId) =>
+  jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
 const createUser = async (req, res) => {
   try {
@@ -30,6 +34,8 @@ const createUser = async (req, res) => {
 
     await user.save();
 
+    const token = generateToken(user._id); 
+
     // Never send password back
     res.status(201).json({
       id: user._id,
@@ -37,7 +43,7 @@ const createUser = async (req, res) => {
       email: user.email,
       phone_number: user.phone_number,
       balance: user.balance,
-    });
+    }, token);
   } catch (error) {
     console.error('Error creating user:', error);
     return res.status(500).json({ error: 'Server error while creating user' });
@@ -67,7 +73,7 @@ const loginUser = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid email or password' });
     }
-
+const token = generateToken(user._id); 
     return res.json({
       user: {
         id: user._id,
@@ -76,6 +82,7 @@ const loginUser = async (req, res) => {
         balance: user.balance,
         emailVerified: user.emailVerified,
       },
+      token,
     });
   } catch (err) {
     console.error('Login error:', err);

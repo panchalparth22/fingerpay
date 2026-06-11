@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState } from "react";
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -13,12 +13,14 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   const login = (userData) => {
     // In a real app, you would call the backend to login
     // For now, we just set the state
     setIsAuthenticated(true);
-    console.log('Logging in user:', userData);
+    console.log("Logging in user:", userData);
     setUser(userData);
   };
 
