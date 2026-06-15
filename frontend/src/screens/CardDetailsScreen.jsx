@@ -11,9 +11,8 @@ import { API_BASE_URL } from "../config/env";
 import { useAuth } from "../context/AuthContext";
 
 const CardDetailsScreen = ({ navigation }) => {
-  const {user, token} = useAuth(); // get user and token from auth context
-  console.log("CardDetailsScreen - user:", user);
-  console.log("CardDetailsScreen - token:", token);
+  const {user, token, login} = useAuth(); // get user and token from auth context
+
   const [cardNumber, setCardNumber] = useState("");
   const [cardName, setCardName] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -56,8 +55,9 @@ const CardDetailsScreen = ({ navigation }) => {
     }
 
     const data = await response.json();
+    console.log("Card saved:", data);
     // optional: update auth context with data.user
-    // setUser(data.user);
+    login({ user: data.user, token });
 
     navigation.goBack();
   } catch (err) {

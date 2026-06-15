@@ -1,4 +1,4 @@
-const { processBiometricPayment } = require('../services/paymentService');
+const { processBiometricPayment, processPayment } = require('../services/paymentService');
 
 const payWithBiometric = async (req, res) => {
   try {
@@ -21,4 +21,26 @@ const payWithBiometric = async (req, res) => {
   }
 };
 
-module.exports = { payWithBiometric };
+const payWithDefaultMethod = async (req, res) => {
+  try {
+    const { recipientIdentifier, amount } = req.body;
+    const userId = req.user.id; // from auth middleware
+
+    // Basic validation
+    if (!recipientIdentifier || typeof recipientIdentifier !== 'string' || recipientIdentifier.trim() === '') {
+      return res.status(400).json({ error: 'Recipient identifier is required' });
+    }
+
+    if (!amount || typeof amount !== 'number' || amount <= 0) {
+      return res.status(400).json({ error: 'Amount must be a positive number' });
+    }
+
+    const result = await processPayment({ senderId: userId, recipientIdentifier, amount });
+    return res.status(200).json({ user: result.sender, transaction: result.transaction });
+  } catch (error) {
+    // Let the error handler middleware deal with known error codes
+    throw error;
+  }
+};
+
+module.exports = { payWithBiometric, payWithDefaultMethod };

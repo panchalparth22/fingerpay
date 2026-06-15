@@ -4,6 +4,7 @@ const userRoutes = require('./routes/userRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const bankRoutes = require('./routes/bankRoutes');
 const authRoutes = require("./routes/authRoutes");
+const merchantRoutes = require("./routes/merchantRoutes");
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -17,7 +18,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/bank', bankRoutes);
 app.use("/api/auth", authRoutes);
-
+app.use("/api/merchant", merchantRoutes);
 
 // Error handling middleware (should be last)
 app.use(errorHandler);

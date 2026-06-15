@@ -12,7 +12,8 @@ import {
   ScrollView,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
-import { isNotEmpty } from "../utils/validation";
+import { API_BASE_URL } from "../config/env";
+import { isNotEmpty, isValidEmail } from "../utils/validation";
 import { useNavigation } from "@react-navigation/native";
 
 const MerchantSignUpScreen = () => {
@@ -29,7 +30,7 @@ const MerchantSignUpScreen = () => {
   const navigation = useNavigation();
 
   const handleSignUp = async () => {
-    // Validate required fields only
+    // Validate required fields
     if (!isNotEmpty(companyName)) {
       Alert.alert("Error", "Please enter company name");
       return;
@@ -40,6 +41,10 @@ const MerchantSignUpScreen = () => {
     }
     if (!isNotEmpty(email)) {
       Alert.alert("Error", "Please enter an email");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      Alert.alert("Error", "Please enter a valid email");
       return;
     }
     if (!isNotEmpty(phoneNumber)) {
@@ -69,29 +74,51 @@ const MerchantSignUpScreen = () => {
 
     setLoading(true);
     try {
-      // Construct merchant object with only required fields (and balance default)
-      const merchantData = {
-        company_name: companyName,
-        merchant_name: merchantName,
-        phone_number: phoneNumber,
-        VAT_number: VATNumber,
-        license_number: licenseNumber,
-        balance: 0, // default as per schema
-        // Optional fields (address, bank_details) omitted as per requirement
-      };
+      const response = await fetch(`${API_BASE_URL}/merchant/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          company_name: companyName,
+          merchant_name: merchantName,
+          email: email,
+          password: password,
+          phone_number: phoneNumber,
+          VAT_number: VATNumber,
+          license_number: licenseNumber,
+          address: "", // optional
+          bank_details: {}, // optional
+        }),
+      });
 
-      // In a real app, we would call the backend to register merchant
-      // For now, we stub it by creating a merchant object and logging in
-      const fakeUser = {
-        id: Math.floor(Math.random() * 10000),
-        company_name: companyName,
-        merchant_name: merchantName,
-        email: `${merchantName.toLowerCase().replace(/\s/g, "")}@example.com`, // placeholder email for auth
-      };
-      login(fakeUser);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Registration failed");
+      }
+
+      const data = await response.json();
+
+      // Log the merchant in using AuthContext (reuse login)
+      login({
+        user: {
+          id: data.id,
+          email: data.email,
+          name: data.merchant_name, // using merchant_name as name
+          // we can also pass additional fields if needed by auth context
+          company_name: data.company_name,
+          merchant_name: data.merchant_name,
+          phone_number: data.phone_number,
+          VAT_number: data.VAT_number,
+          license_number: data.license_number,
+          balance: data.balance,
+        },
+        token: data.token,
+        role: "merchant", // Add role to distinguish between merchant and customer
+      });
 
       // Navigate to main app (or merchant dashboard)
-      navigation.replace("PaymentScreen");
+      navigation.replace("PaymentScreen"); // Assuming this is the main screen after login
     } catch (error) {
       Alert.alert("Registration failed", error.message || "Unknown error");
     } finally {

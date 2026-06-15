@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, TextInput, TouchableOpacity, Button, Alert, StyleSheet, Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE_URL } from '../config/env';
 import { isValidEmail, isNotEmpty } from '../utils/validation';
 import { useNavigation } from '@react-navigation/native';
 
@@ -28,10 +29,43 @@ const MerchantLoginScreen = () => {
 
     setLoading(true);
     try {
-      // In a real app, we would call the backend to login
-      // For now, we stub it by creating a fake user object
-      const fakeUser = { id: 1, email, name: 'Merchant' };
-      login(fakeUser);
+      const response = await fetch(`${API_BASE_URL}/merchant/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Login failed');
+      }
+
+      const data = await response.json();
+
+      // Log the merchant in using AuthContext
+      login({
+        user: {
+          id: data.id,
+          email: data.email,
+          name: data.merchant_name,
+          company_name: data.company_name,
+          merchant_name: data.merchant_name,
+          phone_number: data.phone_number,
+          VAT_number: data.VAT_number,
+          license_number: data.license_number,
+          balance: data.balance,
+        },
+        token: data.token,
+        role: 'merchant', // Add role to distinguish between merchant and customer
+      });
+
+      // Navigate to main app (or merchant dashboard)
+      navigation.replace("PaymentScreen");
     } catch (error) {
       Alert.alert('Login failed', error.message || 'Unknown error');
     } finally {

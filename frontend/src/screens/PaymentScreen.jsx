@@ -1,66 +1,108 @@
-import React, { useState } from 'react';
-import { View, Text, Alert, StyleSheet } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { authenticateWithBiometrics } from '../services/biometricService';
-import { getBiometricId, setBiometricId } from '../services/storageService';
-import { payWithBiometric, createUser } from '../services/api';
-import { formatCurrency } from '../utils/formatCurrency';
-import { isPositiveNumber } from '../utils/validation';
-import AmountInput from '../components/AmountInput';
-import PrimaryButton from '../components/PrimaryButton';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+  ActivityIndicator,
+  Button,
+} from "react-native";
+import { useAuth } from "../context/AuthContext";
+import { API_BASE_URL } from "../config/env";
+import { useNavigation } from "@react-navigation/native";
+import AmountInput from "../components/AmountInput";
+import PrimaryButton from "../components/PrimaryButton";
+import { formatCurrency } from "../utils/formatCurrency";
+import { isNotEmpty, isPositiveNumber } from "../utils/validation";
 
 const PaymentScreen = () => {
-  const [amount, setAmount] = useState('');
+  const { user, token, login, logout } = useAuth();
+  const navigation = useNavigation();
+
+  const [amount, setAmount] = useState("");
+  const [recipient, setRecipient] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { user: merchant } = useAuth();
-  const navigation = useNavigation();
-  const route = useRoute();
 
-  const handlePayWithFingerprint = async () => {
-    if (!isPositiveNumber(parseFloat(amount))) {
-      setError('Please enter a valid amount greater than 0');
+
+  // Optionally refresh user data on mount to ensure latest balance
+  useEffect(() => {
+    if (token) {
+      fetchUser();
+    }
+  }, [token]);
+
+
+  const handleLogout = async () => {
+    await logout(); // clears AsyncStorage + context
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Auth" }], // root stack screen for login/register
+    });
+  };
+
+  const fetchUser = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/me`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.user) {
+        login({ user: data.user, token });
+      }
+    } catch (e) {
+      console.error("Failed to refresh user:", e);
+    }
+  };
+
+  const handleSendPayment = async () => {
+    if (!isNotEmpty(recipient)) {
+      setError("Please enter recipient (email or phone number)");
+      return;
+    }
+    const amountNum = parseFloat(amount);
+    if (!isPositiveNumber(amountNum)) {
+      setError("Please enter a valid amount greater than 0");
       return;
     }
 
-    const amountNum = parseFloat(amount);
     setLoading(true);
     setError(null);
-
     try {
-      // Authenticate with biometrics
-      await authenticateWithBiometrics('Confirm payment with fingerprint');
+      const res = await fetch(`${API_BASE_URL}/payments/pay`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          recipientIdentifier: recipient,
+          amount: amountNum,
+        }),
+      });
 
-      // Get or create biometric ID for this customer
-      let biometricId = await getBiometricId();
-      if (!biometricId) {
-        // Generate a random biometric ID (in reality, this would come from the device's fingerprint sensor)
-        biometricId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        await setBiometricId(biometricId);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Payment failed");
       }
 
-      // Process the payment
-      const result = await payWithBiometric({ biometricId, amount: amountNum });
-      
-      // Navigate to result screen
-      navigation.navigate('PaymentResultScreen', { 
-        user: result.user, 
-        transaction: result.transaction 
+      // Update auth context with updated user data (balance changed)
+      login({ user: data.user, token });
+
+      // Navigate to result screen (we can reuse PaymentResultScreen)
+      navigation.navigate("PaymentResultScreen", {
+        user: data.user,
+        transaction: data.transaction,
       });
     } catch (err) {
-      if (err.code === 'UNKNOWN_BIOMETRIC') {
-        // Navigate to enrolment screen with the biometric ID and amount
-        const biometricId = await getBiometricId() || 'unknown';
-        navigation.navigate('EnrolmentScreen', { 
-          biometricId, 
-          amount: amountNum 
-        });
-      } else if (err.code === 'INSUFFICIENT_FUNDS') {
-        setError('Insufficient funds for this transaction');
-      } else {
-        setError(err.message || 'Payment failed. Please try again.');
-      }
+      setError(err.message || "Payment failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -68,31 +110,62 @@ const PaymentScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>FingerPay Payment</Text>
-      {merchant && (
-        <Text style={styles.subtitle}>Logged in as: {merchant.email}</Text>
-      )}
-      
-      <View style={styles.form}>
-        <AmountInput 
+      <View style={styles.header}>
+        <Text style={styles.title}>Pay Money</Text>
+      </View>
+
+      {/* Recipient */}
+      <View style={styles.inputSection}>
+        <Text style={styles.inputLabel}>Recipient (email or phone)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Enter email or phone number"
+          value={recipient}
+          onChangeText={setRecipient}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+      </View>
+
+      {/* Amount */}
+      <View style={styles.inputSection}>
+        <AmountInput
           label="Amount (£)"
           value={amount}
           onChangeText={setAmount}
-          placeholder="Enter amount"
-        />
-        
-        {error && (
-          <View style={styles.error}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-        
-        <PrimaryButton 
-          title="Pay with Fingerprint"
-          onPress={handlePayWithFingerprint}
-          loading={loading}
+          placeholder="0.00"
         />
       </View>
+
+      {/* Fee and total (placeholder) */}
+      <View style={styles.totalsSection}>
+        <View style={styles.totalsRow}>
+          <Text style={styles.totalsLabel}>Fee</Text>
+          <Text style={styles.totalsValue}>£0.00</Text>
+        </View>
+        <View style={styles.totalsRow}>
+          <Text style={styles.totalsLabel}>Total</Text>
+          <Text style={styles.totalsValue}>
+            {amount ? `£${parseFloat(amount).toFixed(2)}` : "£0.00"}
+          </Text>
+        </View>
+      </View>
+
+      {/* Send button */}
+      <PrimaryButton
+        style={{ marginTop: 20, backgroundColor: "#5b21b6" }}
+        title="Send Payment"
+        onPress={handleSendPayment}
+        loading={loading}
+      />
+
+      {/* Error message */}
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+      <Button title="Log out" onPress={handleLogout} />
     </View>
   );
 };
@@ -100,33 +173,126 @@ const PaymentScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    backgroundColor: '#f9fafb', // gray-50
+    backgroundColor: "#f9fafb",
+    padding: 20,
+  },
+  header: {
+    alignItems: "center",
+    marginVertical: 24,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 16,
-    color: '#1f2937', // gray-800
+    fontSize: 22,
+    fontWeight: "600",
+    color: "#111827",
   },
-  subtitle: {
-    fontSize: 18,
+  balanceSection: {
+    alignItems: "center",
     marginBottom: 24,
-    color: '#6b7280', // gray-600
   },
-  form: {
-    // space-y-4 equivalent: we'll add marginBottom to each child except last
+  balanceLabel: {
+    fontSize: 14,
+    color: "#6b7280",
   },
-  error: {
-    padding: 16,
-    backgroundColor: '#fef2f2', // red-50
-    borderLeftWidth: 4,
-    borderColor: '#dc2626', // red-600
+  balanceAmount: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#111827",
+    marginTop: 4,
+  },
+  inputSection: {
     marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#374151",
+    marginBottom: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    backgroundColor: "#fff",
+  },
+  paymentMethodSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 8,
+  },
+  paymentMethodInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  paymentMethodLabel: {
+    fontSize: 14,
+    color: "#374151",
+  },
+  paymentMethodValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  addPaymentMethodButton: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#5b21b6",
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  addPaymentMethodText: {
+    color: "#5b21b6",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  totalsSection: {
+    marginBottom: 24,
+  },
+  totalsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  totalsLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+  },
+  labelTotal: {
+    fontWeight: "600",
+  },
+  totalsValue: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#111827",
+  },
+  valueTotal: {
+    fontWeight: "600",
+  },
+  errorContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "#fef2f2",
+    borderLeftWidth: 4,
+    borderColor: "#dc2626",
+    borderRadius: 4,
   },
   errorText: {
-    color: '#b91c1c', // red-700
-    fontWeight: '500',
+    color: "#b91c1c",
   },
 });
 

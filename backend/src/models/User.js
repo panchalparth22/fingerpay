@@ -48,6 +48,11 @@ const UserSchema = new mongoose.Schema({
     expiryDate: String,
     userName: String
   },
+  defaultPaymentMethod: {
+    type: String,
+    enum: ['card', 'bank'],
+    default: 'card'
+  },
   createdAt: {
     type: Date,
     default: Date.now

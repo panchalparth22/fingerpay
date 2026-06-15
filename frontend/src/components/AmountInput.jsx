@@ -11,7 +11,7 @@ const AmountInput = ({ label, value, onChangeText, placeholder }) => {
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="gray-400"
+        placeholderTextColor="gray"
       />
     </View>
   );

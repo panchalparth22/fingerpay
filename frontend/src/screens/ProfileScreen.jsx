@@ -16,7 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
   const [name, setName] = useState(user?.name);
-  const [phone, setPhone] = useState(user?.phone || "null");
+  const [phone, setPhone] = useState(user?.phone_number || "null");
   const [email, setEmail] = useState(user?.email);
   const [address, setAddress] = useState(user?.address || "null");
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -113,37 +113,7 @@ const ProfileScreen = () => {
               <Text style={styles.buttonText}>Change Password</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Payment Methods Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Methods</Text>
-
-          {/* Demo Card */}
-          <View style={styles.paymentRow}>
-            <View>
-              <Text style={styles.paymentLabel}>Primary Card</Text>
-              <Text style={styles.paymentValue}>Visa •••• 1234</Text>
-              <Text style={styles.paymentSubValue}>Expires 12/28</Text>
-            </View>
-            <Text style={styles.paymentTag}>Default</Text>
-          </View>
-
-          {/* Demo Bank Account */}
-          <View style={styles.paymentRow}>
-            <View>
-              <Text style={styles.paymentLabel}>Bank Account</Text>
-              <Text style={styles.paymentValue}>Monzo •••• 5678</Text>
-              <Text style={styles.paymentSubValue}>Sort code 12‑34‑56</Text>
-            </View>
-          </View>
-
-          <View style={styles.actionButton}>
-            <TouchableOpacity style={styles.button}>
-              <Text style={styles.buttonText}>Manage Payment Methods</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        </View>        
 
         {/* Account Actions */}
 

@@ -55,9 +55,26 @@ const LoginScreen = () => {
       }
 
       const data = await response.json();
-      // console.log("Login successful, received data:", data);
-      
-      login(data);
+      console.log("data on login:", data.user);
+
+      login({
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name, // adapt these to your actual user fields
+          phone_number: data.user.phone_number,
+          balance: data.user.balance,
+          emailVerified: data.user.emailVerified,
+          cardDetails: data.user.cardDetails,
+          accountDetails: data.user.accountDetails,
+        },
+        token: data.token,
+        role: "customer",
+      });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "CustomerMain" }],
+      });
     } catch (error) {
       Alert.alert("Login failed", error.message || "Network error");
     } finally {

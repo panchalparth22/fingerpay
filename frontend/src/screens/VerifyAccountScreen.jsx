@@ -1,5 +1,5 @@
 // VerifyAccountScreen.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ const VerifyAccountScreen = () => {
   const [biometricVerified, setBiometricVerified] = useState(false);
   const [defaultPayment, setDefaultPayment] = useState("card");
 
-  const { user } = useAuth();
+  const { user, token, login } = useAuth();
 
   const [emailCode, setEmailCode] = useState("");
   const [emailVerified, setEmailVerified] = useState(user?.emailVerified);
@@ -30,8 +30,58 @@ const VerifyAccountScreen = () => {
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
+  const primaryCard = user?.cardDetails;
+  const primaryBank = user?.accountDetails;
+
+  console.log('user on verify: ',user);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/user/me`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await res.json();
+        // console.log("Me response:", data);
+
+        if (res.ok && data.user) {
+          // reuse login so AuthContext + AsyncStorage get updated
+          login({ user: data.user, token });
+        }
+      } catch (e) {
+        console.log("Error fetching /user/me:", e);
+      }
+    };
+
+    if (token) {
+      fetchUser();
+    }
+  }, [token]);
+
   const handleCardPress = () => {
-    navigation.navigate("CardDetailsScreen"); 
+    if (primaryCard) {
+      // Card already saved – do nothing or show a message
+
+      Alert.alert("Card already saved", "You already have a primary card on file.");
+      return;
+    }
+
+    navigation.navigate("CardDetailsScreen");
+  };
+
+  const handleBankPress = () => {
+    const primaryBank = user?.accountDetails;
+    if (primaryBank && primaryBank.accountNumber && primaryBank.sortCode) {
+      // Bank account already saved – do nothing or show a message
+      Alert.alert("Bank account already saved", "You already have a primary bank account on file.");
+      return;
+    }
+
+    navigation.navigate("BankDetailsScreen");
   };
 
   const handleSendEmailCode = async () => {
@@ -58,7 +108,6 @@ const VerifyAccountScreen = () => {
       } catch (e) {
         data = null;
       }
-      console.log("Parsed JSON:", data);
 
       if (!res.ok) {
         throw new Error((data && data.message) || "Failed to send code");
@@ -149,6 +198,23 @@ const VerifyAccountScreen = () => {
           "Biometric authentication successful.",
         );
         // TODO: call backend to set biometricEnabled for this user
+        try {
+          const res = await fetch(`${API_BASE_URL}/user/me`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const data = await res.json();
+          if (res.ok && data.user) {
+            // Update user in auth context
+            login({ user: data.user, token });
+          }
+        } catch (e) {
+          console.log("Error fetching user after biometric verification:", e);
+        }
       } else {
         Alert.alert("Failed", "Biometric authentication failed.");
       }
@@ -158,14 +224,36 @@ const VerifyAccountScreen = () => {
     }
   };
 
-  const handleSaveDefaultPayment = () => {
-    // TODO: call backend to save default payment method for the user
-    Alert.alert(
-      "Saved",
-      `Default payment method set to ${
-        defaultPayment === "card" ? "Card" : "Bank account"
-      }.`,
-    );
+  const handleSaveDefaultPayment = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/me/default-payment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ defaultPayment }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to save default payment method");
+      }
+
+      // Update user in auth context
+      login({ user: data.user, token });
+
+      Alert.alert(
+        "Saved",
+        `Default payment method set to ${
+          defaultPayment === "card" ? "Card" : "Bank account"
+        }.`,
+      );
+    } catch (err) {
+      console.log(err.message);
+      Alert.alert("Error", err.message || "Could not save default payment method.");
+    }
   };
 
   return (
@@ -277,9 +365,22 @@ const VerifyAccountScreen = () => {
             >
               Card
             </Text>
-            <Text style={styles.paymentOptionSub}>
-              Visa / Mastercard / Debit
-            </Text>
+
+            {primaryCard ? (
+              <>
+                <Text style={styles.paymentOptionSub}>Primary card</Text>
+                <Text style={[styles.paymentOptionSub, { fontWeight: "bold" }]}>
+                  Visa * * * * {primaryCard.cardNumber.slice(-4)}
+                </Text>
+                <Text style={styles.paymentOptionSub}>
+                  Expires {primaryCard.expiryDate}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.paymentOptionSub}>
+                Visa / Mastercard / Debit
+              </Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -287,7 +388,7 @@ const VerifyAccountScreen = () => {
               styles.paymentOption,
               defaultPayment === "bank" && styles.paymentOptionActive,
             ]}
-            onPress={() => setDefaultPayment("bank")}
+            onPress={handleBankPress}
           >
             <Text
               style={[
@@ -297,9 +398,23 @@ const VerifyAccountScreen = () => {
             >
               Bank account
             </Text>
-            <Text style={styles.paymentOptionSub}>
-              UK bank transfer or direct debit
-            </Text>
+            {user?.accountDetails?.accountNumber && user?.accountDetails?.sortCode ? (
+              <>
+                <Text style={styles.paymentOptionSub}>Primary bank</Text>
+                <Text style={[styles.paymentOptionSub, { fontWeight: "bold" }]}>
+                  {/* Show last 4 digits of account number */}
+                  **** {user.accountDetails.accountNumber.slice(-4)}
+                </Text>
+                <Text style={styles.paymentOptionSub}>
+                  {/* Show bank name */}
+                  {user.accountDetails.bankName}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.paymentOptionSub}>
+                UK bank transfer or direct debit
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>

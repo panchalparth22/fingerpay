@@ -16,9 +16,12 @@ import MerchantLoginScreen from "../screens/MerchantLoginScreen";
 import MerchantSignUpScreen from "../screens/MerchantSignUpScreen";
 import VerifyAccountScreen from "../screens/VerifyAccountScreen";
 import CardDetailsScreen from "../screens/CardDetailsScreen";
+import BankDetailsScreen from "../screens/BankDetailsScreen";
 
 const RootStack = createStackNavigator();
 const AuthStack = createStackNavigator();
+const CustomerStack = createStackNavigator();
+const MerchantStack = createStackNavigator();
 
 // Auth stack (shown when NOT authenticated)
 const AuthStackScreen = () => (
@@ -48,9 +51,36 @@ const AuthStackScreen = () => (
     />
   </AuthStack.Navigator>
 );
+function CustomerStackScreen() {
+  return (
+    <CustomerStack.Navigator screenOptions={{ headerShown: false }}>
+      <CustomerStack.Screen name="CustomerTabs" component={BottomNavBar} />
+      <RootStack.Screen
+        name="VerifyAccountScreen"
+        component={VerifyAccountScreen}
+      />
+      <RootStack.Screen
+        name="CardDetailsScreen"
+        component={CardDetailsScreen}
+      />
+      <RootStack.Screen
+        name="BankDetailsScreen"
+        component={BankDetailsScreen}
+      />
+    </CustomerStack.Navigator>
+  );
+}
+
+function MerchantStackScreen() {
+  return (
+    <MerchantStack.Navigator screenOptions={{ headerShown: false }}>
+      <MerchantStack.Screen name="PaymentScreen" component={PaymentScreen} />
+    </MerchantStack.Navigator>
+  );
+}
 
 const AppNavigator = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const [isSplashVisible, setIsSplashVisible] = useState(true);
 
   useEffect(() => {
@@ -64,10 +94,7 @@ const AppNavigator = () => {
     return (
       <NavigationContainer>
         <RootStack.Navigator screenOptions={{ headerShown: false }}>
-          <RootStack.Screen
-            name="SplashScreen"
-            component={SplashScreen}
-          />
+          <RootStack.Screen name="SplashScreen" component={SplashScreen} />
         </RootStack.Navigator>
       </NavigationContainer>
     );
@@ -76,47 +103,19 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {/* Main branch that changes based on auth */}
         {!isAuthenticated ? (
+          <RootStack.Screen name="Auth" component={AuthStackScreen} />
+        ) : role === "merchant" ? (
           <RootStack.Screen
-            name="Auth"
-            component={AuthStackScreen}
+            name="MerchantMain"
+            component={MerchantStackScreen}
           />
         ) : (
           <RootStack.Screen
-            name="Main"
-            component={BottomNavBar}
+            name="CustomerMain"
+            component={CustomerStackScreen}
           />
         )}
-
-        {/* Shared screens that either branch can navigate to */}
-        <RootStack.Screen
-          name="VerifyAccountScreen"
-          component={VerifyAccountScreen}
-        />
-        <RootStack.Screen
-          name="CardDetailsScreen"
-          component={CardDetailsScreen}
-        />
-
-        {/* Optional: if any of these are not inside BottomNavBar navigators,
-            you can also register them here in RootStack */}
-        <RootStack.Screen
-          name="HomeScreen"
-          component={HomeScreen}
-        />
-        <RootStack.Screen
-          name="PaymentScreen"
-          component={PaymentScreen}
-        />
-        <RootStack.Screen
-          name="EnrolmentScreen"
-          component={EnrolmentScreen}
-        />
-        <RootStack.Screen
-          name="PaymentResultScreen"
-          component={PaymentResultScreen}
-        />
       </RootStack.Navigator>
     </NavigationContainer>
   );
