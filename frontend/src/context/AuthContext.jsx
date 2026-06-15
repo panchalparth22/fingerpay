@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const AuthContext = createContext();
 
@@ -16,18 +17,59 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
-  const login = (userData) => {
-    // userData should look like { user: {...}, token: "JWT_HERE" }
-    setIsAuthenticated(true);
-    setUser(userData.user);
-    setToken(userData.token);
-    setLoadingAuth(false);
+  // Load auth state once on app start
+  useEffect(() => {
+    const loadAuthState = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem("authToken");
+        const storedUser = await AsyncStorage.getItem("authUser");
+
+        if (storedToken && storedUser) {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+          setIsAuthenticated(true);
+        }
+      } catch (e) {
+        console.log("Error loading auth state:", e);
+      } finally {
+        setLoadingAuth(false);
+      }
+    };
+
+    loadAuthState();
+  }, []);
+
+  const login = async (dataFromApi) => {
+    try {
+      const { user: apiUser, token: apiToken } = dataFromApi;
+
+      if (!apiToken) {
+        console.log("Missing token in login response:", dataFromApi);
+        return;
+      }
+
+      setIsAuthenticated(true);
+      setUser(apiUser);
+      setToken(apiToken);
+
+      await AsyncStorage.setItem("authToken", apiToken);
+      await AsyncStorage.setItem("authUser", JSON.stringify(apiUser));
+    } catch (e) {
+      console.log("Error saving auth state:", e);
+    }
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    setUser(null);
-    setToken(null);
+  const logout = async () => {
+    try {
+      setIsAuthenticated(false);
+      setUser(null);
+      setToken(null);
+
+      await AsyncStorage.removeItem("authToken");
+      await AsyncStorage.removeItem("authUser");
+    } catch (e) {
+      console.log("Error clearing auth state:", e);
+    }
   };
 
   return (

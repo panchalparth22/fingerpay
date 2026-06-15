@@ -55,19 +55,9 @@ const LoginScreen = () => {
       }
 
       const data = await response.json();
-      // setUser(data.user);
-      // setToken(data.token);
-      // await AsyncStorage.setItem(
-      //   "auth",
-      //   JSON.stringify({
-      //     user: data.user,
-      //     token: data.token,
-      //   }),
-      // );
-
-      // data should include user info (and maybe a token) from your backend
-      // e.g. { id, name, email, ... }
-      login(data.user || data);
+      // console.log("Login successful, received data:", data);
+      
+      login(data);
     } catch (error) {
       Alert.alert("Login failed", error.message || "Network error");
     } finally {
