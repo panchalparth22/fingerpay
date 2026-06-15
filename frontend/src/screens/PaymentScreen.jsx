@@ -3,18 +3,15 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
-  Alert,
   StyleSheet,
-  ActivityIndicator,
   Button,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
 import { API_BASE_URL } from "../config/env";
 import { useNavigation } from "@react-navigation/native";
 import AmountInput from "../components/AmountInput";
 import PrimaryButton from "../components/PrimaryButton";
-import { formatCurrency } from "../utils/formatCurrency";
 import { isNotEmpty, isPositiveNumber } from "../utils/validation";
 
 const PaymentScreen = () => {
@@ -22,30 +19,19 @@ const PaymentScreen = () => {
   const navigation = useNavigation();
 
   const [amount, setAmount] = useState("");
-  const [recipient, setRecipient] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-
-  // Optionally refresh user data on mount to ensure latest balance
+  // Refresh merchant data on mount (optional)
   useEffect(() => {
     if (token) {
       fetchUser();
     }
   }, [token]);
 
-
-  const handleLogout = async () => {
-    await logout(); // clears AsyncStorage + context
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Auth" }], // root stack screen for login/register
-    });
-  };
-
   const fetchUser = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/user/me`, {
+      const res = await fetch(`${API_BASE_URL}/merchant/me`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -54,19 +40,29 @@ const PaymentScreen = () => {
       if (!res.ok) return;
       const data = await res.json();
       if (data.user) {
-        login({ user: data.user, token });
+        // keep role from context, just refresh user + token
+        login({ user: data.user, token, role: "merchant" });
       }
     } catch (e) {
-      console.error("Failed to refresh user:", e);
+      console.error("Failed to refresh merchant:", e);
     }
   };
 
-  const handleSendPayment = async () => {
-    if (!isNotEmpty(recipient)) {
-      setError("Please enter recipient (email or phone number)");
+  const handleLogout = async () => {
+    await logout();
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Auth" }],
+    });
+  };
+
+  const handleCharge = async () => {
+    const amountNum = parseFloat(amount);
+
+    if (!isNotEmpty(amount)) {
+      setError("Please enter an amount");
       return;
     }
-    const amountNum = parseFloat(amount);
     if (!isPositiveNumber(amountNum)) {
       setError("Please enter a valid amount greater than 0");
       return;
@@ -74,88 +70,93 @@ const PaymentScreen = () => {
 
     setLoading(true);
     setError(null);
+
     try {
-      const res = await fetch(`${API_BASE_URL}/payments/pay`, {
+      const res = await fetch(`${API_BASE_URL}/payments/merchant-charge`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          recipientIdentifier: recipient,
           amount: amountNum,
+          // later you might add description or reference here
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Payment failed");
+        throw new Error(data.error || "Charge failed");
       }
 
-      // Update auth context with updated user data (balance changed)
-      login({ user: data.user, token });
+      // Update merchant balance in context
+      if (data.user) {
+        login({ user: data.user, token, role: "merchant" });
+      }
 
-      // Navigate to result screen (we can reuse PaymentResultScreen)
+      // Navigate to a result/receipt screen if you want
       navigation.navigate("PaymentResultScreen", {
         user: data.user,
         transaction: data.transaction,
       });
     } catch (err) {
-      setError(err.message || "Payment failed. Please try again.");
+      setError(err.message || "Charge failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleFingerprintPress = () => {
+    // TODO: later you can add biometric flow here
+    // For now, this is intentionally empty as requested.
+  };
+
+  const merchantName = user?.merchant_name || user?.company_name || user?.name;
+  const balanceDisplay = typeof user?.balance === "number"
+    ? `£${user.balance.toFixed(2)}`
+    : "£0.00";
+
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Pay Money</Text>
+        <Text style={styles.title}>Charge customer</Text>
+        <Text style={styles.subtitle}>{merchantName}</Text>
       </View>
 
-      {/* Recipient */}
-      <View style={styles.inputSection}>
-        <Text style={styles.inputLabel}>Recipient (email or phone)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter email or phone number"
-          value={recipient}
-          onChangeText={setRecipient}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+      {/* Balance */}
+      <View style={styles.balanceSection}>
+        <Text style={styles.balanceLabel}>Current balance</Text>
+        <Text style={styles.balanceAmount}>{balanceDisplay}</Text>
       </View>
 
-      {/* Amount */}
+      {/* Amount input */}
       <View style={styles.inputSection}>
+        <Text style={styles.inputLabel}>Charge amount (£)</Text>
         <AmountInput
-          label="Amount (£)"
+          label=""
           value={amount}
           onChangeText={setAmount}
           placeholder="0.00"
         />
       </View>
 
-      {/* Fee and total (placeholder) */}
-      <View style={styles.totalsSection}>
-        <View style={styles.totalsRow}>
-          <Text style={styles.totalsLabel}>Fee</Text>
-          <Text style={styles.totalsValue}>£0.00</Text>
-        </View>
-        <View style={styles.totalsRow}>
-          <Text style={styles.totalsLabel}>Total</Text>
-          <Text style={styles.totalsValue}>
-            {amount ? `£${parseFloat(amount).toFixed(2)}` : "£0.00"}
-          </Text>
-        </View>
-      </View>
+      {/* Fingerprint button (no functionality yet) */}
+      <TouchableOpacity
+        style={styles.fingerprintButton}
+        onPress={handleFingerprintPress}
+        activeOpacity={0.9}
+      >
+        <Ionicons name="finger-print-outline" size={24} color="#f9fafb" />
+        <Text style={styles.fingerprintText}>Pay by fingerprint</Text>
+      </TouchableOpacity>
 
-      {/* Send button */}
+      {/* Confirm charge button */}
       <PrimaryButton
-        style={{ marginTop: 20, backgroundColor: "#5b21b6" }}
-        title="Send Payment"
-        onPress={handleSendPayment}
+        style={{ marginTop: 16, backgroundColor: "#5b21b6" }}
+        title="Confirm charge"
+        onPress={handleCharge}
         loading={loading}
       />
 
@@ -165,7 +166,10 @@ const PaymentScreen = () => {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
-      <Button title="Log out" onPress={handleLogout} />
+
+      <View style={{ marginTop: 24 }}>
+        <Button title="Log out" onPress={handleLogout} />
+      </View>
     </View>
   );
 };
@@ -178,12 +182,18 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginVertical: 24,
+    marginTop: 16,
+    marginBottom: 12,
   },
   title: {
     fontSize: 22,
     fontWeight: "600",
     color: "#111827",
+  },
+  subtitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "#6b7280",
   },
   balanceSection: {
     alignItems: "center",
@@ -200,7 +210,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   inputSection: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   inputLabel: {
     fontSize: 12,
@@ -208,79 +218,19 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginBottom: 4,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    backgroundColor: "#fff",
-  },
-  paymentMethodSection: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 8,
-  },
-  paymentMethodInfo: {
+  fingerprintButton: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  paymentMethodLabel: {
-    fontSize: 14,
-    color: "#374151",
-  },
-  paymentMethodValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  addPaymentMethodButton: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#5b21b6",
-    borderRadius: 8,
-    paddingVertical: 12,
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#111827",
+    paddingVertical: 14,
+    borderRadius: 999,
+    marginTop: 8,
   },
-  addPaymentMethodText: {
-    color: "#5b21b6",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  totalsSection: {
-    marginBottom: 24,
-  },
-  totalsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  totalsLabel: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  labelTotal: {
-    fontWeight: "600",
-  },
-  totalsValue: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#111827",
-  },
-  valueTotal: {
+  fingerprintText: {
+    marginLeft: 8,
+    color: "#f9fafb",
+    fontSize: 15,
     fontWeight: "600",
   },
   errorContainer: {

@@ -15,7 +15,7 @@ const HomeScreen = () => {
   const { user } = useAuth();
   const navigation = useNavigation();
   const userName = user?.name || "there";
-  const walletBalance = 1250.5;
+  const walletBalance = user.balance;
   const [showBalance, setShowBalance] = useState(false);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
 
