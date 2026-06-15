@@ -134,7 +134,7 @@ const MoneyScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f7f7f7",
+    backgroundColor: "#1a1a1a01",
   },
   header: {
     padding: 24,

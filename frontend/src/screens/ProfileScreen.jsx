@@ -11,14 +11,16 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
+import { useNavigation } from "@react-navigation/native";
 
 const ProfileScreen = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [name, setName] = useState(user?.name);
   const [phone, setPhone] = useState(user?.phone || "null");
   const [email, setEmail] = useState(user?.email);
   const [address, setAddress] = useState(user?.address || "null");
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const navigation = useNavigation();
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -26,8 +28,11 @@ const ProfileScreen = () => {
       {
         text: "Logout",
         onPress: () => {
-          // Implement logout logic here
-          console.log("User logged out");
+          logout();                          // clear auth state
+          navigation.reset({                 // go back to Login and clear history
+            index: 0,
+            routes: [{ name: "LoginScreen" }],
+          });
         },
       },
     ]);

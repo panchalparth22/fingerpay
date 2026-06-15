@@ -33,13 +33,13 @@ const BottomNavBar = () => {
           ),
         }}
       />
-      
+
       <Tab.Screen
-        name="Bank"
+        name="Wallet"
         component={MoneyScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cash-outline" color={color} size={size} />
+            <Ionicons name="wallet-outline" size={24} color={color} size={size} />
           ),
         }}
       />

@@ -17,20 +17,23 @@ export const AuthProvider = ({ children }) => {
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   const login = (userData) => {
-    // In a real app, you would call the backend to login
-    // For now, we just set the state
+    // userData should look like { user: {...}, token: "JWT_HERE" }
     setIsAuthenticated(true);
-    console.log("Logging in user:", userData);
-    setUser(userData);
+    setUser(userData.user);
+    setToken(userData.token);
+    setLoadingAuth(false);
   };
 
   const logout = () => {
     setIsAuthenticated(false);
     setUser(null);
+    setToken(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider
+      value={{ isAuthenticated, user, token, loadingAuth, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
