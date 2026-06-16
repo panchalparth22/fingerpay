@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,18 +6,28 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  RefreshControl,
+  ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext"; // adjust path
 import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
+import { API_BASE_URL } from "../config/env";
 
 const HomeScreen = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const navigation = useNavigation();
   const userName = user?.name || "there";
-  const walletBalance = user?.balance || 0.00;
+  const walletBalance = user?.balance;
+  const [balance, setBalance] = useState();
   const [showBalance, setShowBalance] = useState(false);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -27,93 +37,63 @@ const HomeScreen = () => {
     return "Good evening";
   };
 
-  const transactions = [
-    {
-      id: 1,
-      merchantName: "Starbucks",
-      merchantLogo: {
-        uri: "https://images.unsplash.com/photo-1577215451400-f207c63e30be?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      },
-      time: "10:30 AM",
-      amount: -8.5,
-    },
-    {
-      id: 2,
-      merchantName: "Amazon",
-      merchantLogo: {
-        uri: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      },
-      time: "Yesterday, 3:45 PM",
-      amount: -45.99,
-    },
-    {
-      id: 3,
-      merchantName: "Uber",
-      merchantLogo: {
-        uri: "https://images.unsplash.com/photo-1615929361868-2e41ea1befaf?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      },
-      time: "Jun 9, 8:20 AM",
-      amount: -15.0,
-    },
-    {
-      id: 4,
-      merchantName: "Starbucks",
-      merchantLogo: {
-        uri: "https://images.unsplash.com/photo-1577215451400-f207c63e30be?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      },
-      time: "10:30 AM",
-      amount: -8.5,
-    },
-    {
-      id: 5,
-      merchantName: "Amazon",
-      merchantLogo: {
-        uri: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      },
-      time: "Yesterday, 3:45 PM",
-      amount: -45.99,
-    },
-    {
-      id: 6,
-      merchantName: "Uber",
-      merchantLogo: {
-        uri: "https://images.unsplash.com/photo-1615929361868-2e41ea1befaf?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      },
-      time: "Jun 9, 8:20 AM",
-      amount: -15.0,
-    },
-    {
-      id: 7,
-      merchantName: "Starbucks",
-      merchantLogo: {
-        uri: "https://images.unsplash.com/photo-1577215451400-f207c63e30be?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      },
-      time: "10:30 AM",
-      amount: -8.5,
-    },
-    {
-      id: 8,
-      merchantName: "Amazon",
-      merchantLogo: {
-        uri: "https://images.unsplash.com/photo-1523474253046-8cd2748b5fd2?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      },
-      time: "Yesterday, 3:45 PM",
-      amount: -45.99,
-    },
-    {
-      id: 9,
-      merchantName: "Uber",
-      merchantLogo: {
-        uri: "https://images.unsplash.com/photo-1615929361868-2e41ea1befaf?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      },
-      time: "Jun 9, 8:20 AM",
-      amount: -15.0,
-    },
-  ];
+  const fetchHomeData = async (token) => {
+    const [userRes, txRes] = await Promise.all([
+      fetch(`${API_BASE_URL}/user/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch(`${API_BASE_URL}/user/transactions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
 
-  const visibleTransactions = showAllTransactions
-    ? transactions
-    : transactions.slice(0, 4);
+    const userData = await userRes.json();
+    const txData = await txRes.json();
+    // console.log("trasn::", txData);
+    console.log(userData);
+
+    if (!userRes.ok) throw new Error(userData.error || "Failed to load user");
+    if (!txRes.ok)
+      throw new Error(txData.error || "Failed to load transactions");
+
+    return { user: userData, transactions: txData.transactions };
+  };
+
+  const loadData = async () => {
+    try {
+      setError(null);
+      const data = await fetchHomeData(token);
+      setBalance(Number(data.user.user.balance) || 0);
+      setTransactions(data.transactions);
+    } catch (err) {
+      setError(err.message || "Failed to load");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // 1) Load when screen first mounts and whenever it gets focus again
+  useFocusEffect(
+    useCallback(() => {
+      setRefreshing(true);
+      loadData();
+    }, [token]),
+  );
+
+  // 2) Pull to refresh
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  if (loading && !refreshing) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -123,9 +103,12 @@ const HomeScreen = () => {
           <Text style={styles.subGreetingText}>Hi, {userName} 👋</Text>
         </View>
 
-        <TouchableOpacity style={styles.verifyButton} onPress={() => {
-          navigation.navigate("VerifyAccountScreen");
-        }}>
+        <TouchableOpacity
+          style={styles.verifyButton}
+          onPress={() => {
+            navigation.navigate("VerifyAccountScreen");
+          }}
+        >
           <Text style={styles.verifyButtonText}>Verify Account</Text>
         </TouchableOpacity>
       </View>
@@ -147,45 +130,78 @@ const HomeScreen = () => {
         </View>
 
         <Text style={styles.walletAmount}>
-          {showBalance ? `£${walletBalance.toFixed(2)}` : "****"}
+          {showBalance ? `£${Number(balance || 0).toFixed(2)}` : "****"}
         </Text>
       </View>
 
-      <View style={styles.transactionHistoryContainer}>
-        <View style={styles.transactionHeaderRow}>
-          <Text style={styles.transactionHistoryTitle}>
-            Recent Transactions
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => setShowAllTransactions((prev) => !prev)}
-          >
-            <Text style={styles.seeAllText}>
-              {showAllTransactions ? "See less" : "See all"}
+      {error && <Text style={{ color: "red" }}>{error}</Text>}
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <View style={styles.transactionHistoryContainer}>
+          <View style={styles.transactionHeaderRow}>
+            <Text style={styles.transactionHistoryTitle}>
+              Recent Transactions
             </Text>
-          </TouchableOpacity>
-        </View>
 
-        <FlatList
-          data={visibleTransactions}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.transactionItem}>
-              <Image source={item.merchantLogo} style={styles.merchantLogo} />
-              <View style={styles.transactionDetails}>
-                <Text style={styles.merchantName}>{item.merchantName}</Text>
-                <Text style={styles.time}>{item.time}</Text>
-              </View>
-              <Text style={styles.amount}>
-                -£{Math.abs(item.amount).toFixed(2)}
+            <TouchableOpacity
+              onPress={() => setShowAllTransactions((prev) => !prev)}
+            >
+              <Text style={styles.seeAllText}>
+                {showAllTransactions ? "See less" : "See all"}
               </Text>
-            </View>
-          )}
-          // optional: limit height so it scrolls inside the card when expanded
-          style={{ maxHeight: showAllTransactions ? 500 : undefined }}
-          ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-        />
-      </View>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            style={{ marginTop: 16 }}
+            data={transactions} // already mapped to UI shape
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => {
+              const d = new Date(item.createdAt);
+
+              const date = d.toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              });
+
+              const time = d.toLocaleTimeString("en-GB", {
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              return (
+                <View style={styles.transactionItem}>
+                  {item.merchantImage ? (
+                    <Image
+                      source={{ uri: item.merchantImage }}
+                      style={styles.merchantLogo}
+                    />
+                  ) : (
+                    <View
+                      style={[styles.merchantLogo, { backgroundColor: "#eee" }]}
+                    />
+                  )}
+                  <View style={styles.transactionDetails}>
+                    <Text style={styles.merchantName}>{item.merchantName}</Text>
+                    <Text style={styles.time}>{date}</Text>
+                    <Text style={{ fontSize: 12, color: "#1a1a1a70" }}>
+                      {time}
+                    </Text>
+                  </View>
+                  <Text style={styles.amount}>
+                    {item.amount < 0 ? "-" : "-£"}
+                    {Math.abs(item.amount).toFixed(2)}
+                  </Text>
+                </View>
+              );
+            }}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          />
+        </View>
+      </ScrollView>
     </View>
   );
 };

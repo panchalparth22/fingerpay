@@ -4,6 +4,7 @@ const { createUser, loginUser, getMe, saveDefaultPaymentMethod } = require('../c
 const {protect} = require("../middleware/authMiddleware");
 const {saveCardDetails, topupWithCard} = require("../controllers/cardController");
 const {topupWithBank} = require('../controllers/bankController');
+const {getUserTransactions} = require('../controllers/userController');
 
 // POST /api/user/register
 router.post('/register', createUser);
@@ -14,6 +15,8 @@ router.post("/me/card", protect, saveCardDetails);
 router.post("/me/default-payment", protect, saveDefaultPaymentMethod);
 router.post("/wallet/topup-card", protect, topupWithCard);
 router.post("/wallet/topup-bank", protect, topupWithBank);
+
+router.get("/transactions", protect, getUserTransactions);
 
 router.get("/me", protect, getMe);
 

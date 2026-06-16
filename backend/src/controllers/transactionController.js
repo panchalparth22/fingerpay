@@ -9,7 +9,7 @@ const Transaction = require("../models/Transaction");
 const chargeCustomer = async (req, res) => {
   try {
     const { customerEmail, amount } = req.body;
-    console.log("request: ",req.merchant);
+    // console.log("request: ",req.merchant);
 
     // 1. Validate body
     if (!customerEmail || !amount) {
@@ -51,9 +51,10 @@ const chargeCustomer = async (req, res) => {
     const transaction = await Transaction.create({
       user: customer._id,
       merchant: merchant._id,
+      companyName: merchant.company_name,
       merchantName:
-        merchant.merchant_name || merchant.company_name || merchant.email,
-      merchantImage: merchant.logoUrl || null, // adjust field name
+        merchant.company_name || merchant.merchant_name || merchant.email,
+      merchantImage: merchant.merchantLogo, // adjust field name
       amount: numericAmount,
     });
 

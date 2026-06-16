@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Transaction = require('../models/Transaction');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -135,6 +136,33 @@ const getMe = async (req, res) => {
   }
 };
 
+const getUserTransactions = async (req, res) => {
+  try {
+    // req.user is set by your user auth middleware
+    const userId = req.user.id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Option A: if you stored userId on each Transaction
+    // const transactions = await Transaction.find({ user: userId })
+    //   .sort({ createdAt: -1 });
+
+    // Option B (if you have user.transactions with ObjectIds):
+    await user.populate({
+      path: "transactions",
+      options: { sort: { createdAt: -1 } },
+    });
+    const transactions = user.transactions;
+
+    return res.json({ transactions });
+  } catch (err) {
+    console.error("Error getting user transactions:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
 
 
 const saveDefaultPaymentMethod = async (req, res) => {
@@ -178,4 +206,4 @@ const saveDefaultPaymentMethod = async (req, res) => {
   }
 };
 
-module.exports = { createUser, loginUser, getMe, saveDefaultPaymentMethod };
+module.exports = { createUser, loginUser, getMe, saveDefaultPaymentMethod, getUserTransactions };
