@@ -6,6 +6,7 @@ import PaymentScreen from "../screens/PaymentScreen";
 import HistoryScreen from "../screens/HistoryScreen";
 import WithdrawScreen from "../screens/WithdrawScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import VerifyFingerPrintScreen from "../screens/VerifyFingerPrintScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -26,12 +27,12 @@ function MerchantTabs() {
         },
 
         tabBarIcon: ({ color, size }) => {
-
           let iconName;
 
           if (route.name === "Payment") iconName = "home-outline";
           else if (route.name === "History") iconName = "time-outline";
           else if (route.name === "Withdraw") iconName = "cash-outline";
+          else if (route.name === "Verify") iconName = "finger-print-outline";
           else if (route.name === "Profile") iconName = "person-outline";
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -41,6 +42,7 @@ function MerchantTabs() {
       <Tab.Screen name="Payment" component={PaymentScreen} />
       <Tab.Screen name="History" component={HistoryScreen} />
       <Tab.Screen name="Withdraw" component={WithdrawScreen} />
+      <Tab.Screen name="Verify" component={VerifyFingerPrintScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
