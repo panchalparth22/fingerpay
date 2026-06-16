@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import Merchant from "../models/Merchant.js";
 
 export const protectMerchant = async (req, res, next) => {
+  console.log(req.headers);
   let token;
 
   // Expect: Authorization: Bearer <token>
@@ -12,16 +13,24 @@ export const protectMerchant = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(" ")[1];
 
-      // verify token
+      // verify incoming token (matches generateToken)
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log(decoded);
+      // decoded = { id: "...", iat: ..., exp: ... }
 
-      // attach merchant (without password) to request
+      // find merchant
       const merchant = await Merchant.findById(decoded.id).select("-password");
       if (!merchant) {
         return res.status(401).json({ message: "Merchant not found" });
       }
 
-      req.merchant = { id: merchant._id, email: merchant.email, name: merchant.merchant_name };
+      // attach merchant info to request
+      req.merchant = {
+        id: merchant._id,
+        email: merchant.email,
+        name: merchant.merchant_name,
+      };
+
       return next();
     } catch (err) {
       console.error("Merchant auth error:", err);

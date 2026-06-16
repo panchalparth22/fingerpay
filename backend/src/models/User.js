@@ -53,6 +53,12 @@ const UserSchema = new mongoose.Schema({
     enum: ['card', 'bank'],
     default: 'card'
   },
+  transactions: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Transaction",
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now

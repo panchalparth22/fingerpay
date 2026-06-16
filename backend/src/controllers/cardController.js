@@ -60,3 +60,57 @@ export const saveCardDetails = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+export const topupWithCard = async (req, res) => {
+  try {
+    const userId = req.user.id; 
+    const { amount } = req.body;
+
+    // 1. Validate amount
+    if (amount === undefined || amount === null) {
+      return res.status(400).json({ error: "Amount is required" });
+    }
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res
+        .status(400)
+        .json({ error: "Amount must be a positive number" });
+    }
+
+    // 2. (Placeholder) Process card payment here
+    // e.g. await stripe.charges.create(...) or call your bank simulator
+    // For now, we assume payment succeeds.
+
+    // 3. Update user balance
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    user.balance = (user.balance || 0) + numericAmount;
+    await user.save();
+
+    // 4. Return updated user (shape matches your login response)
+    return res.json({
+      user: {
+        id: user._id,
+        email: user.email,
+        phone_number: user.phone_number,
+        name: user.name,
+        balance: user.balance,
+        emailVerified: user.emailVerified,
+        cardDetails: user.cardDetails,
+        accountDetails: user.accountDetails,
+      },
+      transaction: {
+        amount: numericAmount,
+        type: "card_topup",
+        createdAt: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    console.error("Error in topupWithCard:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};

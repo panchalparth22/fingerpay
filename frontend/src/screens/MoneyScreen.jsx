@@ -14,9 +14,11 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useAuth } from "../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
 import { LayoutAnimation } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
+import { API_BASE_URL } from "../config/env";
 
 const MoneyScreen = () => {
-  const { user } = useAuth();
+  const { user, token, login, role } = useAuth();
   useEffect(() => {
     console.log(user);
   }, []);
@@ -25,10 +27,12 @@ const MoneyScreen = () => {
 
   const [bankExpanded, setBankExpanded] = useState(false);
   const [bankTopupAmount, setBankTopupAmount] = useState("");
+  const [bankTopupLoading, setBankTopupLoading] = useState(false);
   const [bankTopupError, setBankTopupError] = useState(null);
 
   const [cardExpanded, setCardExpanded] = useState(false);
   const [cardTopupAmount, setCardTopupAmount] = useState("");
+  const [cardTopupLoading, setCardTopupLoading] = useState(false);
   const [cardTopupError, setCardTopupError] = useState(null);
 
   const handleCardPayment = () => {
@@ -39,11 +43,6 @@ const MoneyScreen = () => {
     if (!cardExpanded) {
       setBankExpanded(false);
     }
-  };
-  const handleCardTopup = () => {
-    // later: call backend, update balance
-    setCardTopupAmount("");
-    setCardExpanded(false);
   };
 
   const handleBankTransfer = () => {
@@ -63,10 +62,107 @@ const MoneyScreen = () => {
       setCardExpanded(false);
     }
   };
-  const handleBankTopup = () => {
-    // Later: call your /wallet/topup-bank endpoint and update context
-    setBankTopupAmount("");
-    setBankExpanded(false);
+  const handleCardTopup = async () => {
+    const amountNum = parseFloat(cardTopupAmount);
+
+    if (!cardTopupAmount) {
+      setCardTopupError("Please enter an amount");
+      return;
+    }
+
+    setCardTopupLoading(true);
+    setCardTopupError(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/wallet/topup-card`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount: amountNum }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Top up failed");
+      }
+
+      // assume backend returns updated user
+      if (data.user) {
+        login({
+          user: {
+            ...user,
+            ...data.user, // or just data.user if shape matches
+          },
+          token,
+          role, // 'customer' or 'merchant'
+        });
+      }
+
+      // clean up UI
+      setCardTopupAmount("");
+      setCardExpanded(false);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "CustomerMain" }],
+      });
+    } catch (err) {
+      setCardTopupError(err.message || "Top up failed. Please try again.");
+    } finally {
+      setCardTopupLoading(false);
+    }
+  };
+  const handleBankTopup = async () => {
+    const amountNum = parseFloat(bankTopupAmount);
+
+    if (!bankTopupAmount) {
+      setBankTopupError("Please enter an amount");
+      return;
+    }
+
+    setBankTopupLoading(true);
+    setBankTopupError(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/wallet/topup-bank`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount: amountNum }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Top up failed");
+      }
+
+      if (data.user) {
+        login({
+          user: {
+            ...user,
+            ...data.user, // updated balance, etc.
+          },
+          token,
+          role,
+        });
+      }
+
+      setBankTopupAmount("");
+      setBankExpanded(false);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "CustomerMain" }],
+      });
+    } catch (err) {
+      setBankTopupError(err.message || "Top up failed. Please try again.");
+    } finally {
+      setBankTopupLoading(false);
+    }
   };
 
   const handleComingSoon = () => {
@@ -76,198 +172,208 @@ const MoneyScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Add Money to Wallet</Text>
-      </View>
+    <ScrollView>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Add Money to Wallet</Text>
+        </View>
 
-      <View style={styles.availableMethodsSection}>
-        <Text style={styles.sectionTitle}>Available Payment Methods</Text>
+        <View style={styles.availableMethodsSection}>
+          <Text style={styles.sectionTitle}>Available Payment Methods</Text>
 
-        <TouchableOpacity
-          style={styles.paymentMethodButton}
-          onPress={handleBankTransfer}
-        >
-          <View
-            style={[
-              styles.paymentMethodContent,
-              { justifyContent: "space-between" },
-            ]}
+          <TouchableOpacity
+            style={styles.paymentMethodButton}
+            onPress={handleBankTransfer}
           >
             <View
-              style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+              style={[
+                styles.paymentMethodContent,
+                { justifyContent: "space-between" },
+              ]}
             >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+              >
+                <MaterialCommunityIcons
+                  name="bank-outline"
+                  style={styles.paymentMethodIcon}
+                />
+                <View>
+                  <Text style={styles.paymentMethodTitle}>Bank Transfer:</Text>
+                  {user?.accountDetails ? (
+                    <Text>
+                      {user.accountDetails.bankName} * * * *{" "}
+                      {user.accountDetails.accountNumber.slice(-4)}
+                    </Text>
+                  ) : (
+                    <Text>You need to add Bank Details first</Text>
+                  )}
+                  <Text style={styles.paymentMethodDescr}>
+                    Transfer funds from bank account
+                  </Text>
+                </View>
+              </View>
               <MaterialCommunityIcons
-                name="bank-outline"
+                name="greater-than"
+                style={[
+                  styles.go,
+                  {
+                    transform: [
+                      { rotate: bankExpanded ? "270deg" : "90deg" }, // flips on click
+                    ],
+                  },
+                ]}
+              />
+            </View>
+          </TouchableOpacity>
+          {bankExpanded && (
+            <View style={styles.bankExpandContainer}>
+              <Text style={styles.expandLabel}>Add money from bank</Text>
+              <TextInput
+                style={styles.expandInput}
+                placeholder="Amount (£)"
+                keyboardType="numeric"
+                value={bankTopupAmount}
+                onChangeText={setBankTopupAmount}
+              />
+              {bankTopupError && (
+                <Text style={styles.expandError}>{bankTopupError}</Text>
+              )}
+
+              <TouchableOpacity
+                style={styles.bankAddButton}
+                onPress={handleBankTopup}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.bankAddButtonText}>
+                  {bankTopupLoading ? "Adding..." : "Add to wallet"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.paymentMethodButton}
+            onPress={handleCardPayment}
+          >
+            <View
+              style={[
+                styles.paymentMethodContent,
+                { justifyContent: "space-between" },
+              ]}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+              >
+                <Ionicons
+                  name="card-outline"
+                  style={styles.paymentMethodIcon}
+                />
+                <View>
+                  <Text style={styles.paymentMethodTitle}>By Card</Text>
+                  {user?.cardDetails ? (
+                    <Text>
+                      Primary Card * * * *{" "}
+                      {user.cardDetails.cardNumber.slice(-4)}
+                    </Text>
+                  ) : (
+                    <Text>You need to add Bank Details first</Text>
+                  )}
+                  <Text style={styles.paymentMethodDescr}>
+                    Add funds using debit/credit card
+                  </Text>
+                </View>
+              </View>
+              <MaterialCommunityIcons
+                name="greater-than"
+                style={[
+                  styles.go,
+                  {
+                    transform: [
+                      { rotate: cardExpanded ? "270deg" : "90deg" }, // flips on click
+                    ],
+                  },
+                ]}
+              />
+            </View>
+          </TouchableOpacity>
+          {cardExpanded && (
+            <View style={styles.cardExpandContainer}>
+              <Text style={styles.expandLabel}>Add money with card</Text>
+              <TextInput
+                style={styles.expandInput}
+                placeholder="Amount (£)"
+                keyboardType="numeric"
+                value={cardTopupAmount}
+                onChangeText={setCardTopupAmount}
+              />
+              {cardTopupError && (
+                <Text style={styles.expandError}>{cardTopupError}</Text>
+              )}
+              <TouchableOpacity
+                style={styles.cardAddButton}
+                onPress={handleCardTopup}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.cardAddButtonText}>
+                  {cardTopupLoading ? "Adding..." : "Add to wallet"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.comingSoonSection}>
+          <Text style={styles.sectionTitle}>Coming Soon</Text>
+
+          <TouchableOpacity
+            style={[
+              styles.paymentMethodButton,
+              styles.paymentMethodButtonDisabled,
+            ]}
+            onPress={handleComingSoon}
+          >
+            <View style={styles.paymentMethodContent}>
+              <FontAwesome5
+                name="apple-pay"
+                size={24}
                 style={styles.paymentMethodIcon}
               />
               <View>
-                <Text style={styles.paymentMethodTitle}>Bank Transfer:</Text>
-                {user?.accountDetails ? (
-                  <Text>
-                    {user.accountDetails.bankName} * * * *{" "}
-                    {user.accountDetails.accountNumber.slice(-4)}
-                  </Text>
-                ) : (
-                  <Text>You need to add Bank Details first</Text>
-                )}
-                <Text style={styles.paymentMethodDescr}>
-                  Transfer funds from bank account
+                <Text style={styles.paymentMethodTitle}>Apple Pay</Text>
+                <Text style={styles.paymentMethodDescrcomingSoon}>
+                  Secure payments with Face ID or Touch ID
                 </Text>
               </View>
+              <Text style={styles.comingSoonBadge}>Coming Soon</Text>
             </View>
-            <MaterialCommunityIcons
-              name="greater-than"
-              style={[
-                styles.go,
-                {
-                  transform: [
-                    { rotate: bankExpanded ? "270deg" : "90deg" }, // flips on click
-                  ],
-                },
-              ]}
-            />
-          </View>
-        </TouchableOpacity>
-        {bankExpanded && (
-          <View style={styles.bankExpandContainer}>
-            <Text style={styles.expandLabel}>Add money from bank</Text>
-            <TextInput
-              style={styles.expandInput}
-              placeholder="Amount (£)"
-              keyboardType="numeric"
-              value={bankTopupAmount}
-              onChangeText={setBankTopupAmount}
-            />
-            {bankTopupError && (
-              <Text style={styles.expandError}>{bankTopupError}</Text>
-            )}
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.bankAddButton}
-              onPress={handleBankTopup}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.bankAddButtonText}>Add to wallet</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <TouchableOpacity
-          style={styles.paymentMethodButton}
-          onPress={handleCardPayment}
-        >
-          <View
+          <TouchableOpacity
             style={[
-              styles.paymentMethodContent,
-              { justifyContent: "space-between" },
+              styles.paymentMethodButton,
+              styles.paymentMethodButtonDisabled,
             ]}
+            onPress={handleComingSoon}
           >
-            <View
-              style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
-            >
-              <Ionicons name="card-outline" style={styles.paymentMethodIcon} />
+            <View style={styles.paymentMethodContent}>
+              <FontAwesome5
+                name="paypal"
+                size={24}
+                style={styles.paymentMethodIcon}
+              />
               <View>
-                <Text style={styles.paymentMethodTitle}>By Card</Text>
-                {user?.cardDetails ? (
-                  <Text>
-                    Primary Card * * * * {user.cardDetails.cardNumber.slice(-4)}
-                  </Text>
-                ) : (
-                  <Text>You need to add Bank Details first</Text>
-                )}
-                <Text style={styles.paymentMethodDescr}>
-                  Add funds using debit/credit card
+                <Text style={styles.paymentMethodTitle}>PayPal</Text>
+                <Text style={styles.paymentMethodDescrcomingSoon}>
+                  Pay using your PayPal balance
                 </Text>
               </View>
+              <Text style={styles.comingSoonBadge}>Coming Soon</Text>
             </View>
-            <MaterialCommunityIcons
-              name="greater-than"
-              style={[
-                styles.go,
-                {
-                  transform: [
-                    { rotate: cardExpanded ? "270deg" : "90deg" }, // flips on click
-                  ],
-                },
-              ]}
-            />
-          </View>
-        </TouchableOpacity>
-        {cardExpanded && (
-          <View style={styles.cardExpandContainer}>
-            <Text style={styles.expandLabel}>Add money with card</Text>
-            <TextInput
-              style={styles.expandInput}
-              placeholder="Amount (£)"
-              keyboardType="numeric"
-              value={cardTopupAmount}
-              onChangeText={setCardTopupAmount}
-            />
-            {cardTopupError && (
-              <Text style={styles.expandError}>{cardTopupError}</Text>
-            )}
-            <TouchableOpacity
-              style={styles.cardAddButton}
-              onPress={handleCardTopup}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.cardAddButtonText}>Add to wallet</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <View style={styles.comingSoonSection}>
-        <Text style={styles.sectionTitle}>Coming Soon</Text>
-
-        <TouchableOpacity
-          style={[
-            styles.paymentMethodButton,
-            styles.paymentMethodButtonDisabled,
-          ]}
-          onPress={handleComingSoon}
-        >
-          <View style={styles.paymentMethodContent}>
-            <FontAwesome5
-              name="apple-pay"
-              size={24}
-              style={styles.paymentMethodIcon}
-            />
-            <View>
-              <Text style={styles.paymentMethodTitle}>Apple Pay</Text>
-              <Text style={styles.paymentMethodDescrcomingSoon}>
-                Secure payments with Face ID or Touch ID
-              </Text>
-            </View>
-            <Text style={styles.comingSoonBadge}>Coming Soon</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.paymentMethodButton,
-            styles.paymentMethodButtonDisabled,
-          ]}
-          onPress={handleComingSoon}
-        >
-          <View style={styles.paymentMethodContent}>
-            <FontAwesome5
-              name="paypal"
-              size={24}
-              style={styles.paymentMethodIcon}
-            />
-            <View>
-              <Text style={styles.paymentMethodTitle}>PayPal</Text>
-              <Text style={styles.paymentMethodDescrcomingSoon}>
-                Pay using your PayPal balance
-              </Text>
-            </View>
-            <Text style={styles.comingSoonBadge}>Coming Soon</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </ScrollView>
   );
 };
 

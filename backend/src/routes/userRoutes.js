@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { createUser, loginUser, getMe, saveDefaultPaymentMethod } = require('../controllers/userController');
 const {protect} = require("../middleware/authMiddleware");
-const {saveCardDetails} = require("../controllers/cardController");
+const {saveCardDetails, topupWithCard} = require("../controllers/cardController");
+const {topupWithBank} = require('../controllers/bankController');
 
 // POST /api/user/register
 router.post('/register', createUser);
@@ -11,6 +12,8 @@ router.post('/login', loginUser);
 
 router.post("/me/card", protect, saveCardDetails);
 router.post("/me/default-payment", protect, saveDefaultPaymentMethod);
+router.post("/wallet/topup-card", protect, topupWithCard);
+router.post("/wallet/topup-bank", protect, topupWithBank);
 
 router.get("/me", protect, getMe);
 

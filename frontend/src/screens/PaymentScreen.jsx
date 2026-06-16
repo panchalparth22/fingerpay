@@ -5,6 +5,7 @@ import {
   TextInput,
   StyleSheet,
   Button,
+  TouchableOpacity
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
@@ -12,7 +13,6 @@ import { API_BASE_URL } from "../config/env";
 import { useNavigation } from "@react-navigation/native";
 import AmountInput from "../components/AmountInput";
 import PrimaryButton from "../components/PrimaryButton";
-import { isNotEmpty, isPositiveNumber } from "../utils/validation";
 
 const PaymentScreen = () => {
   const { user, token, login, logout } = useAuth();
@@ -20,7 +20,7 @@ const PaymentScreen = () => {
 
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
 
   // Refresh merchant data on mount (optional)
   useEffect(() => {
@@ -58,15 +58,6 @@ const PaymentScreen = () => {
 
   const handleCharge = async () => {
     const amountNum = parseFloat(amount);
-
-    if (!isNotEmpty(amount)) {
-      setError("Please enter an amount");
-      return;
-    }
-    if (!isPositiveNumber(amountNum)) {
-      setError("Please enter a valid amount greater than 0");
-      return;
-    }
 
     setLoading(true);
     setError(null);
