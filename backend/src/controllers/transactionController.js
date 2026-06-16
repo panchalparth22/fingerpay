@@ -47,6 +47,9 @@ const chargeCustomer = async (req, res) => {
     customer.balance = (customer.balance || 0) - numericAmount;
     await customer.save();
 
+    merchant.balance = (merchant.balance || 0) + numericAmount;
+    await merchant.save();
+
     // 6. Create transaction record
     const transaction = await Transaction.create({
       user: customer._id,

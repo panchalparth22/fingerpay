@@ -64,11 +64,13 @@ const MerchantHistoryScreen = () => {
       year: "numeric",
     });
 
-    const time = d.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    }).toUpperCase();
+    const time = d
+      .toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .toUpperCase();
 
     return (
       <View style={styles.item}>
@@ -98,9 +100,9 @@ const MerchantHistoryScreen = () => {
   return (
     <View style={styles.container}>
       {error && <Text style={styles.error}>{error}</Text>}
+      <Text style={styles.title}>Recent Transactions</Text>
 
-      <ScrollView>
-        <Text style={styles.title}>Recent Transactions</Text>
+      <ScrollView showsVerticalScrollIndicator={false}>
         <FlatList
           data={transactions}
           keyExtractor={(item) => item._id || item.id}
@@ -126,7 +128,7 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "#efefef",
   },
-  title:{
+  title: {
     fontWeight: "700",
     fontSize: 24,
     marginTop: 18,
@@ -163,7 +165,7 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#008000"
+    color: "#008000",
   },
   error: {
     color: "red",
