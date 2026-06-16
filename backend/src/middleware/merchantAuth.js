@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import Merchant from "../models/Merchant.js";
 
 export const protectMerchant = async (req, res, next) => {
-  console.log(req.headers);
+  // console.log(req.headers);
   let token;
 
   // Expect: Authorization: Bearer <token>
@@ -15,7 +15,7 @@ export const protectMerchant = async (req, res, next) => {
 
       // verify incoming token (matches generateToken)
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log(decoded);
+      // console.log(decoded);
       // decoded = { id: "...", iat: ..., exp: ... }
 
       // find merchant

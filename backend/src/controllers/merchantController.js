@@ -1,4 +1,5 @@
 const Merchant = require('../models/Merchant');
+const Transaction = require('../models/Transaction');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -105,4 +106,33 @@ const getMerchantMe = async (req, res) => {
   }
 };
 
-module.exports = { registerMerchant, loginMerchant, getMerchantMe };
+const getMerchantTransactions = async (req, res) => {
+  try {
+    const merchantId = req.merchant.id; // set by protectMerchant
+
+    // Fetch all transactions for this merchant and populate customer name/email
+    const transactions = await Transaction.find({ merchant: merchantId })
+      .populate({
+        path: "user",
+        select: "name email", // adjust fields based on your User schema
+      })
+      .sort({ createdAt: -1 });
+
+    // Shape response: include username, email, amount, createdAt, etc.
+    const formatted = transactions.map((tx) => ({
+      id: tx._id,
+      customerName: tx.user?.name || null,
+      customerEmail: tx.user?.email || null,
+      amount: tx.amount,
+      createdAt: tx.createdAt,
+    }));
+
+    return res.json({ transactions: formatted });
+  } catch (err) {
+    console.error("Error getting merchant transactions:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+module.exports = { registerMerchant, loginMerchant, getMerchantMe, getMerchantTransactions };

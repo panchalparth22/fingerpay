@@ -21,7 +21,7 @@ const PrimaryButton = ({ title, onPress, loading = false }) => {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#2563eb', // blue-600
+    backgroundColor: '#5b216b', // blue-600
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,

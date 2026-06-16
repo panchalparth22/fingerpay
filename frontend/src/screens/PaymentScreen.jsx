@@ -5,7 +5,8 @@ import {
   TextInput,
   StyleSheet,
   Button,
-  TouchableOpacity
+  TouchableOpacity,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
@@ -22,7 +23,6 @@ const PaymentScreen = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Refresh merchant data on mount (optional)
   useEffect(() => {
     if (token) {
       fetchUser();
@@ -46,6 +46,26 @@ const PaymentScreen = () => {
     } catch (e) {
       console.error("Failed to refresh merchant:", e);
     }
+  };
+
+  const handleAmountChange = (text) => {
+    // 1) Remove everything except digits and dot
+    let cleaned = text.replace(/[^0-9.]/g, "");
+
+    // 2) Only allow a single dot
+    const parts = cleaned.split(".");
+    if (parts.length > 2) {
+      cleaned = parts[0] + "." + parts[1];
+    }
+
+    // 3) Limit to 2 digits after decimal
+    if (parts.length === 2) {
+      const integerPart = parts[0];
+      const decimalPart = parts[1].slice(0, 2); // max 2 digits
+      cleaned = integerPart + "." + decimalPart;
+    }
+
+    setAmount(cleaned);
   };
 
   const handleLogout = async () => {
@@ -104,33 +124,36 @@ const PaymentScreen = () => {
   };
 
   const merchantName = user?.merchant_name || user?.company_name || user?.name;
-  const balanceDisplay = typeof user?.balance === "number"
-    ? `£${user.balance.toFixed(2)}`
-    : "£0.00";
+  const companyName = user?.company_name;
+  const balanceDisplay =
+    typeof user?.balance === "number" ? `£${user.balance.toFixed(2)}` : "£0.00";
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Charge customer</Text>
-        <Text style={styles.subtitle}>{merchantName}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Text style={[styles.title, { color: "#5b21b6" }]}>Finger</Text>
+          <Text style={styles.title}>Pay</Text>
+        </View>
+        <Text style={styles.subtitle}>{companyName}</Text>
       </View>
 
-      {/* Balance */}
+      <Image source={require("../../assets/logo.png")} style={styles.logo} />
+
       <View style={styles.balanceSection}>
-        <Text style={styles.balanceLabel}>Current balance</Text>
-        <Text style={styles.balanceAmount}>{balanceDisplay}</Text>
-      </View>
+        <Text style={styles.balanceLabel}>Amount</Text>
 
-      {/* Amount input */}
-      <View style={styles.inputSection}>
-        <Text style={styles.inputLabel}>Charge amount (£)</Text>
-        <AmountInput
-          label=""
-          value={amount}
-          onChangeText={setAmount}
-          placeholder="0.00"
-        />
+        <View style={styles.balanceAmountWrapper}>
+          <Text style={styles.balanceCurrency}>£</Text>
+          <TextInput
+            style={styles.balanceAmountInput}
+            value={amount}
+            onChangeText={handleAmountChange}
+            placeholder="0.00"
+            keyboardType="numeric"
+          />
+        </View>
       </View>
 
       {/* Fingerprint button (no functionality yet) */}
@@ -140,16 +163,8 @@ const PaymentScreen = () => {
         activeOpacity={0.9}
       >
         <Ionicons name="finger-print-outline" size={24} color="#f9fafb" />
-        <Text style={styles.fingerprintText}>Pay by fingerprint</Text>
+        <Text style={styles.fingerprintText}>Take Payment</Text>
       </TouchableOpacity>
-
-      {/* Confirm charge button */}
-      <PrimaryButton
-        style={{ marginTop: 16, backgroundColor: "#5b21b6" }}
-        title="Confirm charge"
-        onPress={handleCharge}
-        loading={loading}
-      />
 
       {/* Error message */}
       {error && (
@@ -157,10 +172,6 @@ const PaymentScreen = () => {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
-
-      <View style={{ marginTop: 24 }}>
-        <Button title="Log out" onPress={handleLogout} />
-      </View>
     </View>
   );
 };
@@ -168,46 +179,66 @@ const PaymentScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#efefef",
     padding: 20,
   },
   header: {
     alignItems: "center",
     marginTop: 16,
-    marginBottom: 12,
+    marginBottom: 72,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "600",
+    fontSize: 50,
+    fontWeight: "900",
     color: "#111827",
   },
   subtitle: {
     marginTop: 4,
-    fontSize: 14,
+    fontSize: 25,
+    fontWeight: "400",
     color: "#6b7280",
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 30,
+    alignSelf: "center",
   },
   balanceSection: {
+    marginBottom: 16,
     alignItems: "center",
-    marginBottom: 24,
   },
   balanceLabel: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  balanceAmount: {
-    fontSize: 28,
+    alignSelf: "center",
+    fontSize: 30,
+    color: "#5b21b6",
     fontWeight: "700",
-    color: "#111827",
-    marginTop: 4,
+    marginBottom: 4,
+    marginTop: 10,
+  },
+  balanceAmountWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  balanceCurrency: {
+    fontSize: 32,
+    fontWeight: "700",
+    marginRight: 4,
+  },
+  balanceAmountInput: {
+    fontSize: 32,
+    fontWeight: "700",
+    textAlign: "center",
+    minWidth: 70,
   },
   inputSection: {
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: "500",
     color: "#374151",
-    marginBottom: 4,
   },
   fingerprintButton: {
     flexDirection: "row",
@@ -216,7 +247,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#111827",
     paddingVertical: 14,
     borderRadius: 999,
-    marginTop: 8,
+    marginTop: 10,
   },
   fingerprintText: {
     marginLeft: 8,
