@@ -17,6 +17,7 @@ import MerchantSignUpScreen from "../screens/MerchantSignUpScreen";
 import VerifyAccountScreen from "../screens/VerifyAccountScreen";
 import CardDetailsScreen from "../screens/CardDetailsScreen";
 import BankDetailsScreen from "../screens/BankDetailsScreen";
+import MerchantTabs from "../components/MerchantTabs";
 
 const RootStack = createStackNavigator();
 const AuthStack = createStackNavigator();
@@ -74,7 +75,7 @@ function CustomerStackScreen() {
 function MerchantStackScreen() {
   return (
     <MerchantStack.Navigator screenOptions={{ headerShown: false }}>
-      <MerchantStack.Screen name="PaymentScreen" component={PaymentScreen} />
+      <MerchantStack.Screen name="PaymentScreen" component={MerchantTabs} />
     </MerchantStack.Navigator>
   );
 }
