@@ -1,7 +1,7 @@
-const User = require('../models/User');
-const Transaction = require('../models/Transaction');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const User = require("../models/User");
+const Transaction = require("../models/Transaction");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 const generateToken = (userId) =>
   jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -12,13 +12,17 @@ const createUser = async (req, res) => {
 
     // Basic validation for signup step
     if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
+      return res
+        .status(400)
+        .json({ error: "Name, email, and password are required" });
     }
 
     // Check if user already exists with this email
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: 'User with this email already exists' });
+      return res
+        .status(400)
+        .json({ error: "User with this email already exists" });
     }
 
     // Hash password
@@ -35,46 +39,49 @@ const createUser = async (req, res) => {
 
     await user.save();
 
-    const token = generateToken(user._id); 
+    const token = generateToken(user._id);
 
     // Never send password back
-    res.status(201).json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-      phone_number: user.phone_number,
-      balance: user.balance,
-    }, token);
+    res.status(201).json(
+      {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone_number: user.phone_number,
+        balance: user.balance,
+      },
+      token,
+    );
   } catch (error) {
-    console.error('Error creating user:', error);
-    return res.status(500).json({ error: 'Server error while creating user' });
+    console.error("Error creating user:", error);
+    return res.status(500).json({ error: "Server error while creating user" });
   }
 };
 
 const loginUser = async (req, res) => {
   try {
-    console.log('Login request body:', req.body);
+    // console.log("Login request body:", req.body);
 
     const { email, password } = req.body;
 
     if (!email || !password) {
-      console.log('Missing email or password');
-      return res.status(400).json({ error: 'Email and password are required' });
+      console.log("Missing email or password");
+      return res.status(400).json({ error: "Email and password are required" });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      console.log('No user found for email:', email);
-      return res.status(400).json({ error: 'Invalid email or password' });
+      console.log("No user found for email:", email);
+      return res.status(400).json({ error: "Invalid email or password" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match?', isMatch);
+    // console.log("Password match?", isMatch);
 
     if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid email or password' });
+      return res.status(400).json({ error: "Invalid email or password" });
     }
-const token = generateToken(user._id); 
+    const token = generateToken(user._id);
     return res.json({
       user: {
         id: user._id,
@@ -90,8 +97,8 @@ const token = generateToken(user._id);
       role: "customer",
     });
   } catch (err) {
-    console.error('Login error:', err);
-    return res.status(500).json({ error: 'Server error while logging in' });
+    console.error("Login error:", err);
+    return res.status(500).json({ error: "Server error while logging in" });
   }
 };
 
@@ -164,15 +171,19 @@ const getUserTransactions = async (req, res) => {
   }
 };
 
-
 const saveDefaultPaymentMethod = async (req, res) => {
   try {
     const userId = req.user.id; // from auth middleware
     const { defaultPaymentMethod } = req.body;
 
     // Validate that it's either 'card' or 'bank'
-    if (!defaultPaymentMethod || !['card', 'bank'].includes(defaultPaymentMethod)) {
-      return res.status(400).json({ message: "Invalid default payment method" });
+    if (
+      !defaultPaymentMethod ||
+      !["card", "bank"].includes(defaultPaymentMethod)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Invalid default payment method" });
     }
 
     const user = await User.findByIdAndUpdate(
@@ -182,7 +193,7 @@ const saveDefaultPaymentMethod = async (req, res) => {
           defaultPaymentMethod,
         },
       },
-      { new: true }
+      { new: true },
     ).lean();
 
     if (!user) {
@@ -206,4 +217,41 @@ const saveDefaultPaymentMethod = async (req, res) => {
   }
 };
 
-module.exports = { createUser, loginUser, getMe, saveDefaultPaymentMethod, getUserTransactions };
+const getUserByEmail = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required" });
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    console.log("No user found for email:", email);
+    return res.status(400).json({ error: "Invalid email or password" });
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+  // console.log("Password match?", isMatch);
+
+  if (!isMatch) {
+    return res.status(400).json({ error: "Invalid email or password" });
+  }
+
+  // Do NOT send password back
+  return res.json({
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+    },
+  });
+};
+
+module.exports = {
+  createUser,
+  loginUser,
+  getMe,
+  saveDefaultPaymentMethod,
+  getUserTransactions,
+  getUserByEmail,
+};
